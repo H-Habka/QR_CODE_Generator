@@ -1,0 +1,1015 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Stylish QR Code Generator</title>
+    <style>
+      :root {
+        --bg: #0f1419;
+        --surface: #1a2332;
+        --border: #2d3a4d;
+        --text: #e8eef4;
+        --muted: #8b9cb3;
+        --accent: #3d9cf5;
+        --accent-hover: #5cb0ff;
+        --success: #3ecf8e;
+        --radius: 12px;
+        --shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
+        /* On-screen QR size (PNG export stays 3.2 cm @ 300 DPI). */
+        --qr-display-size: min(5.4cm, min(92vw - 320px, 52vw));
+      }
+
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+        margin: 0;
+        min-height: 100vh;
+        background: radial-gradient(ellipse 120% 80% at 50% -20%, #1a2d44, var(--bg));
+        color: var(--text);
+        line-height: 1.5;
+        padding: 1rem 1.25rem;
+      }
+
+      .wrap {
+        max-width: 1280px;
+        margin: 0 auto;
+        width: 100%;
+      }
+
+      .layout {
+        display: grid;
+        grid-template-columns: minmax(300px, 480px) minmax(280px, 1fr);
+        gap: 1.25rem;
+        align-items: start;
+      }
+
+      .panel {
+        min-width: 0;
+      }
+
+      h1 {
+        font-size: 1.5rem;
+        font-weight: 600;
+        margin: 0 0 0.25rem;
+        letter-spacing: -0.02em;
+      }
+
+      .subtitle {
+        color: var(--muted);
+        font-size: 0.9rem;
+        margin: 0 0 1rem;
+      }
+
+      .card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: 1.25rem;
+        box-shadow: var(--shadow);
+      }
+
+      label {
+        display: block;
+        font-size: 0.8rem;
+        font-weight: 500;
+        color: var(--muted);
+        margin-bottom: 0.35rem;
+        text-align: left;
+      }
+
+      input[type="text"] {
+        width: 100%;
+        padding: 0.75rem 1rem;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        background: var(--bg);
+        color: var(--text);
+        font-size: 1rem;
+        margin-bottom: 1rem;
+      }
+
+      input[type="text"]:focus {
+        outline: 2px solid var(--accent);
+        outline-offset: 2px;
+      }
+
+      input[type="text"]::placeholder {
+        color: var(--muted);
+        opacity: 0.7;
+      }
+
+      input[type="number"] {
+        width: 100%;
+        padding: 0.75rem 1rem;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        background: var(--bg);
+        color: var(--text);
+        font-size: 1rem;
+        margin-bottom: 1rem;
+      }
+
+      input[type="number"]:focus {
+        outline: 2px solid var(--accent);
+        outline-offset: 2px;
+      }
+
+      .whatsapp-note {
+        font-size: 0.9rem;
+        color: var(--muted);
+        text-align: left;
+        margin: 0 0 1rem;
+        padding: 0.75rem 1rem;
+        background: var(--bg);
+        border-radius: 8px;
+        border: 1px solid var(--border);
+      }
+
+      .whatsapp-note strong {
+        color: var(--text);
+        font-weight: 600;
+      }
+
+      .row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 0.75rem;
+        margin-bottom: 1rem;
+      }
+
+      .row-full {
+        grid-column: 1 / -1;
+      }
+
+      .field-block {
+        margin-bottom: 1rem;
+      }
+
+      .field-block > label {
+        margin-bottom: 0.35rem;
+      }
+
+      input[type="color"] {
+        width: 100%;
+        height: 40px;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 2px;
+        cursor: pointer;
+        background: var(--bg);
+      }
+
+      input[type="range"] {
+        width: 100%;
+        accent-color: var(--accent);
+      }
+
+      select {
+        width: 100%;
+        padding: 0.65rem 0.85rem;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        background: var(--bg);
+        color: var(--text);
+        font-size: 0.95rem;
+        margin-bottom: 1rem;
+        cursor: pointer;
+      }
+
+      select:focus {
+        outline: 2px solid var(--accent);
+        outline-offset: 2px;
+      }
+
+      select:disabled {
+        opacity: 0.55;
+        cursor: not-allowed;
+      }
+
+      .section-title {
+        font-size: 0.68rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--muted);
+        margin: 1.15rem 0 0.6rem;
+        padding-bottom: 0.35rem;
+        border-bottom: 1px solid var(--border);
+      }
+
+      .card .section-title:first-of-type {
+        margin-top: 0;
+      }
+
+      .hint-line {
+        font-size: 0.82rem;
+        color: var(--muted);
+        margin: -0.35rem 0 1rem;
+        line-height: 1.4;
+      }
+
+      .sub-label {
+        font-size: 0.72rem;
+        color: var(--muted);
+        margin: 0.25rem 0 0.35rem;
+      }
+
+      .btn-block {
+        width: 100%;
+        margin-top: 0.85rem;
+        flex: none !important;
+      }
+
+
+      .range-value {
+        font-size: 0.75rem;
+        color: var(--muted);
+        text-align: right;
+        margin-top: 0.25rem;
+      }
+
+      .checkbox-row {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        margin-bottom: 1rem;
+        text-align: left;
+      }
+
+      .checkbox-row input {
+        width: 1rem;
+        height: 1rem;
+        accent-color: var(--accent);
+      }
+
+      .checkbox-row label {
+        margin: 0;
+        font-size: 0.9rem;
+        color: var(--text);
+        cursor: pointer;
+      }
+
+      .actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+      }
+
+      button {
+        flex: 1;
+        min-width: 120px;
+        padding: 0.75rem 1rem;
+        border: none;
+        border-radius: 8px;
+        font-size: 0.95rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background 0.15s, transform 0.1s;
+      }
+
+      button:active {
+        transform: scale(0.98);
+      }
+
+      button.primary {
+        background: var(--accent);
+        color: #0a0f14;
+      }
+
+      button.primary:hover {
+        background: var(--accent-hover);
+      }
+
+      button.secondary {
+        background: var(--border);
+        color: var(--text);
+      }
+
+      button.secondary:hover {
+        filter: brightness(1.15);
+      }
+
+      .msg {
+        margin-top: 0.75rem;
+        font-size: 0.85rem;
+        min-height: 1.25rem;
+        text-align: left;
+      }
+
+      .msg.error {
+        color: #ff8a8a;
+      }
+
+      .msg.ok {
+        color: var(--success);
+      }
+
+      .preview {
+        margin-top: 0;
+        padding: 0.85rem 1rem 1.1rem;
+        background: var(--bg);
+        border-radius: var(--radius);
+        border: 1px dashed var(--border);
+        display: block;
+        width: 100%;
+        min-height: calc(var(--qr-display-size) + 3rem);
+        position: sticky;
+        top: 0.5rem;
+        z-index: 3;
+        align-self: start;
+        box-shadow: var(--shadow);
+        max-height: calc(100vh - 1rem);
+        overflow-x: hidden;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+      }
+
+      .preview-header {
+        font-size: 0.72rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.07em;
+        color: var(--muted);
+        margin: 0 0 0.65rem;
+        padding-bottom: 0.4rem;
+        border-bottom: 1px solid var(--border);
+      }
+
+      .qr-grid {
+        display: flex;
+        flex-direction: row;
+        flex-wrap: wrap;
+        gap: 0.75rem 0.85rem;
+        align-items: flex-end;
+        justify-content: center;
+        padding: 0.25rem 0.15rem 0.35rem;
+        width: 100%;
+      }
+
+      .qr-cell {
+        flex: 0 0 auto;
+        text-align: center;
+      }
+
+      .qr-cell-label {
+        display: block;
+        font-size: 0.72rem;
+        font-weight: 600;
+        color: var(--muted);
+        margin-bottom: 0.35rem;
+        letter-spacing: 0.02em;
+      }
+
+      .qr-slot {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+      }
+
+      /* Render bitmap at QR_SIZE_PX; display at real 3.2 cm (print / CSS). */
+      .qr-slot canvas,
+      .qr-slot svg {
+        width: var(--qr-display-size) !important;
+        height: var(--qr-display-size) !important;
+        max-width: var(--qr-display-size) !important;
+        max-height: var(--qr-display-size) !important;
+        object-fit: contain;
+      }
+
+      @media (max-width: 720px) {
+        .layout {
+          grid-template-columns: 1fr;
+        }
+
+        .preview {
+          position: static;
+          order: -1;
+          max-height: none;
+          min-height: calc(var(--qr-display-size) + 2.5rem);
+        }
+
+        :root {
+          --qr-display-size: min(4.6cm, 88vw);
+        }
+      }
+
+      @media (max-width: 480px) {
+        .row {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <div class="layout">
+        <div class="panel">
+          <h1>Stylish QR Code</h1>
+          <p class="subtitle">
+            WhatsApp <strong style="color: var(--text)">+971588930130</strong> — the <strong>live preview</strong> on the right updates as you change options. It stays <strong>sticky</strong> while you scroll the form.
+          </p>
+
+          <div class="card">
+        <p class="whatsapp-note">
+          QR links to WhatsApp <strong>+971588930130</strong> (<code>wa.me/971588930130</code>).<br />
+          Code is fixed at <strong>3.2 × 3.2 cm</strong> (PNG <span id="qr-px-label"></span> px for print).
+        </p>
+        <p class="hint-line">
+          Every control updates the QRs immediately (codes <strong>1…N</strong> wrap in the preview). Export size is still <strong>3.2 cm</strong> in the PNG files.
+        </p>
+
+        <h3 class="section-title">Table &amp; center image</h3>
+        <label for="center-num">Up to table number (1–25) — will create QRs for <strong>1</strong> through this value</label>
+        <input
+          type="number"
+          id="center-num"
+          min="1"
+          max="25"
+          step="1"
+          value="1"
+          inputmode="numeric"
+          autocomplete="off"
+        />
+
+        <div class="checkbox-row">
+          <input type="checkbox" id="use-center-num" checked />
+          <label for="use-center-num">Show number in center</label>
+        </div>
+
+        <div class="field-block">
+          <label for="center-num-scale">Center number size <span id="center-num-scale-label">100</span>%</label>
+          <input
+            type="range"
+            id="center-num-scale"
+            min="50"
+            max="200"
+            value="100"
+            step="5"
+          />
+        </div>
+
+        <div class="field-block">
+          <label for="center-image-margin">Center image margin <span id="center-margin-label">2</span> px</label>
+          <input type="range" id="center-image-margin" min="0" max="14" value="2" step="1" />
+        </div>
+
+        <div class="checkbox-row">
+          <input type="checkbox" id="hide-bg-dots-under-image" checked />
+          <label for="hide-bg-dots-under-image">Clear modules under center image (cleaner hole)</label>
+        </div>
+
+        <h3 class="section-title">Module shape</h3>
+        <label for="dots-type">Data dot style</label>
+        <select id="dots-type">
+          <option value="square">Square</option>
+          <option value="dots">Dots</option>
+          <option value="rounded">Rounded</option>
+          <option value="extra-rounded" selected>Extra rounded</option>
+          <option value="classy">Classy</option>
+          <option value="classy-rounded">Classy rounded</option>
+        </select>
+
+        <label for="corner-square-type">Finder corner (outer) style</label>
+        <select id="corner-square-type">
+          <option value="square">Square</option>
+          <option value="dot">Dot</option>
+          <option value="extra-rounded" selected>Extra rounded</option>
+          <option value="rounded">Rounded</option>
+          <option value="classy">Classy</option>
+          <option value="classy-rounded">Classy rounded</option>
+        </select>
+
+        <label for="corner-dot-type">Finder corner (inner) style</label>
+        <select id="corner-dot-type">
+          <option value="square">Square</option>
+          <option value="dot">Dot</option>
+          <option value="extra-rounded" selected>Extra rounded</option>
+          <option value="rounded">Rounded</option>
+          <option value="classy">Classy</option>
+          <option value="classy-rounded">Classy rounded</option>
+        </select>
+
+        <label for="ecc-level">Error correction</label>
+        <select id="ecc-level">
+          <option value="L">L — smallest (~7% recovery)</option>
+          <option value="M" selected>M — default (~15%)</option>
+          <option value="Q">Q — (~25%)</option>
+          <option value="H">H — strongest (~30%)</option>
+        </select>
+        <p class="hint-line" id="ecc-hint" hidden>With a center image, correction is fixed at <strong>H</strong>.</p>
+
+        <h3 class="section-title">Colors &amp; gradients</h3>
+        <div class="row">
+          <div>
+            <label for="fg-color">Module (dot) color</label>
+            <input type="color" id="fg-color" value="#0f1419" />
+          </div>
+          <div>
+            <label for="bg-color">Background</label>
+            <input type="color" id="bg-color" value="#ffffff" />
+          </div>
+        </div>
+
+        <div class="checkbox-row">
+          <input type="checkbox" id="dot-gradient" />
+          <label for="dot-gradient">Gradient on modules &amp; finder (same gradient)</label>
+        </div>
+        <div class="row" id="dot-gradient-row" hidden>
+          <div>
+            <label for="fg-color-2">Gradient end color</label>
+            <input type="color" id="fg-color-2" value="#3d9cf5" />
+          </div>
+          <div>
+            <label for="dot-grad-rotate">Gradient angle (°)</label>
+            <input type="number" id="dot-grad-rotate" min="0" max="360" value="45" />
+          </div>
+        </div>
+
+        <div class="checkbox-row">
+          <input type="checkbox" id="bg-gradient" />
+          <label for="bg-gradient">Gradient background</label>
+        </div>
+        <div class="row" id="bg-gradient-row" hidden>
+          <div>
+            <label for="bg-color-2">Background gradient end</label>
+            <input type="color" id="bg-color-2" value="#e8eef4" />
+          </div>
+          <div>
+            <label for="bg-grad-rotate">Background angle (°)</label>
+            <input type="number" id="bg-grad-rotate" min="0" max="360" value="135" />
+          </div>
+        </div>
+
+        <div class="checkbox-row">
+          <input type="checkbox" id="separate-corner-colors" />
+          <label for="separate-corner-colors">Different colors for finder corners (not gradient)</label>
+        </div>
+        <div class="row" id="corner-colors-row" hidden>
+          <div>
+            <label for="corner-square-color">Finder outer color</label>
+            <input type="color" id="corner-square-color" value="#0f1419" />
+          </div>
+          <div>
+            <label for="corner-dot-color">Finder inner color</label>
+            <input type="color" id="corner-dot-color" value="#0f1419" />
+          </div>
+        </div>
+
+        <div class="actions">
+          <button type="button" class="secondary" id="btn-download">Download PNG(s)</button>
+        </div>
+        <p class="msg" id="msg" role="status" aria-live="polite"></p>
+          </div>
+        </div>
+
+        <div class="preview" aria-label="QR previews">
+          <div class="preview-header">Live preview</div>
+          <div id="qr-grid" class="qr-grid"></div>
+        </div>
+      </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/qr-code-styling@1.5.0/lib/qr-code-styling.js"></script>
+    <script>
+      /** Full international number +971588930130 → wa.me without + or spaces */
+      const WHATSAPP_URL = "https://wa.me/971588930130";
+      const qrData = WHATSAPP_URL;
+
+      /** 3.2 cm @ 300 DPI → pixel square (sharp when printed at 3.2 cm). */
+      const QR_SIZE_CM = 3.2;
+      const QR_PRINT_DPI = 300;
+      const QR_SIZE_PX = Math.round((QR_SIZE_CM * QR_PRINT_DPI) / 2.54);
+
+      document.getElementById("qr-px-label").textContent = String(QR_SIZE_PX);
+
+      const el = {
+        centerNum: document.querySelector("#center-num"),
+        centerNumScale: document.querySelector("#center-num-scale"),
+        centerNumScaleLabel: document.querySelector("#center-num-scale-label"),
+        centerImageMargin: document.querySelector("#center-image-margin"),
+        centerMarginLabel: document.querySelector("#center-margin-label"),
+        hideBgDotsUnderImage: document.querySelector("#hide-bg-dots-under-image"),
+        useCenterNum: document.querySelector("#use-center-num"),
+        dotsType: document.querySelector("#dots-type"),
+        cornerSquareType: document.querySelector("#corner-square-type"),
+        cornerDotType: document.querySelector("#corner-dot-type"),
+        eccLevel: document.querySelector("#ecc-level"),
+        eccHint: document.querySelector("#ecc-hint"),
+        fg: document.querySelector("#fg-color"),
+        bg: document.querySelector("#bg-color"),
+        dotGradient: document.querySelector("#dot-gradient"),
+        dotGradientRow: document.querySelector("#dot-gradient-row"),
+        fg2: document.querySelector("#fg-color-2"),
+        dotGradRotate: document.querySelector("#dot-grad-rotate"),
+        bgGradient: document.querySelector("#bg-gradient"),
+        bgGradientRow: document.querySelector("#bg-gradient-row"),
+        bg2: document.querySelector("#bg-color-2"),
+        bgGradRotate: document.querySelector("#bg-grad-rotate"),
+        separateCornerColors: document.querySelector("#separate-corner-colors"),
+        cornerColorsRow: document.querySelector("#corner-colors-row"),
+        cornerSquareColor: document.querySelector("#corner-square-color"),
+        cornerDotColor: document.querySelector("#corner-dot-color"),
+        msg: document.querySelector("#msg"),
+        grid: document.querySelector("#qr-grid"),
+      };
+
+      /** Slider 50–200%: scales overlay slot (`imageSize`) and target canvas for the digit. */
+      function centerScalePercent() {
+        return Math.min(200, Math.max(50, Number(el.centerNumScale.value) || 100));
+      }
+
+      /** `imageSize` is qr-code-styling’s fraction of the code (default 0.4). */
+      function centerImageSizeFromSlider() {
+        const p = centerScalePercent();
+        return Math.min(0.58, Math.max(0.2, 0.24 + ((p - 50) / 150) * 0.32));
+      }
+
+      function measureTextBox(ctx, text, fontSize) {
+        ctx.font = 'bold ' + fontSize + 'px system-ui, "Segoe UI", sans-serif';
+        const m = ctx.measureText(text);
+        const w = m.width;
+        let asc = m.actualBoundingBoxAscent;
+        let desc = m.actualBoundingBoxDescent;
+        if (asc == null || desc == null || (asc <= 0 && desc <= 0)) {
+          asc = fontSize * 0.8;
+          desc = fontSize * 0.28;
+        }
+        const h = asc + desc;
+        return { w, h, asc, desc };
+      }
+
+      /** Transparent PNG: only the digits — baseline from real ascent/descent so the top isn’t clipped. */
+      function centerLabelDataUrl(text, qrWidth) {
+        const pct = centerScalePercent();
+        const mult = pct / 100;
+        const maxSide = Math.min(384, Math.round(qrWidth * (0.5 + 0.14 * mult)));
+
+        const canvas = document.createElement("canvas");
+        const ctx = canvas.getContext("2d");
+
+        const pad = 3;
+        const vFudge = 1.08;
+        let side = Math.max(28, maxSide);
+        let lo = 10;
+        let hi = Math.floor(side * 1.35);
+        let best = lo;
+        while (lo <= hi) {
+          const mid = (lo + hi) >> 1;
+          const { w, h } = measureTextBox(ctx, text, mid);
+          const needH = h * vFudge;
+          if (w <= side - pad * 2 && needH <= side - pad * 2) {
+            best = mid;
+            lo = mid + 1;
+          } else hi = mid - 1;
+        }
+
+        const fontSize = best;
+
+        canvas.width = side;
+        canvas.height = side;
+
+        ctx.font = 'bold ' + fontSize + 'px system-ui, "Segoe UI", sans-serif';
+        const box = measureTextBox(ctx, text, fontSize);
+        ctx.fillStyle = el.fg.value;
+        ctx.textAlign = "center";
+        ctx.textBaseline = "alphabetic";
+        const baselineY = side / 2 - (box.desc - box.asc) / 2;
+        ctx.fillText(text, side / 2, baselineY);
+        return canvas.toDataURL("image/png");
+      }
+
+      function clampCenterNum(n) {
+        const x = Math.round(Number(n));
+        if (Number.isNaN(x)) return 1;
+        return Math.min(25, Math.max(1, x));
+      }
+
+      function centerPayloadForLabel(label) {
+        const margin = Math.min(20, Math.max(0, Number(el.centerImageMargin.value) || 0));
+        return {
+          image: centerLabelDataUrl(label, QR_SIZE_PX),
+          imageOptions: {
+            margin: margin,
+            crossOrigin: "anonymous",
+            imageSize: centerImageSizeFromSlider(),
+            hideBackgroundDots: el.hideBgDotsUnderImage.checked,
+          },
+        };
+      }
+
+      function degToRad(deg) {
+        return (Number(deg) || 0) * (Math.PI / 180);
+      }
+
+      /** qr-code-styling expects colorStops as { offset, color }[], not tuples. */
+      function modulePaint() {
+        if (el.dotGradient.checked) {
+          return {
+            gradient: {
+              type: "linear",
+              rotation: degToRad(el.dotGradRotate.value),
+              colorStops: [
+                { offset: 0, color: el.fg.value },
+                { offset: 1, color: el.fg2.value },
+              ],
+            },
+          };
+        }
+        return { color: el.fg.value };
+      }
+
+      function bgPaint() {
+        if (el.bgGradient.checked) {
+          return {
+            gradient: {
+              type: "linear",
+              rotation: degToRad(el.bgGradRotate.value),
+              colorStops: [
+                { offset: 0, color: el.bg.value },
+                { offset: 1, color: el.bg2.value },
+              ],
+            },
+          };
+        }
+        return { color: el.bg.value };
+      }
+
+      function finderOuterPaint() {
+        if (el.separateCornerColors.checked) return { color: el.cornerSquareColor.value };
+        return modulePaint();
+      }
+
+      function finderInnerPaint() {
+        if (el.separateCornerColors.checked) return { color: el.cornerDotColor.value };
+        return modulePaint();
+      }
+
+      function effectiveEcc() {
+        if (el.useCenterNum.checked) return "H";
+        return el.eccLevel.value;
+      }
+
+      function baseOptions() {
+        const dotsPaint = modulePaint();
+        const outer = finderOuterPaint();
+        const inner = finderInnerPaint();
+        return {
+          width: QR_SIZE_PX,
+          height: QR_SIZE_PX,
+          data: qrData,
+          qrOptions: {
+            errorCorrectionLevel: effectiveEcc(),
+          },
+          dotsOptions: {
+            type: el.dotsType.value,
+            ...dotsPaint,
+          },
+          backgroundOptions: bgPaint(),
+          cornersSquareOptions: {
+            type: el.cornerSquareType.value,
+            ...outer,
+          },
+          cornersDotOptions: {
+            type: el.cornerDotType.value,
+            ...inner,
+          },
+        };
+      }
+
+      function buildOptionsForCenterDigit(d) {
+        return {
+          ...baseOptions(),
+          ...centerPayloadForLabel(String(d)),
+        };
+      }
+
+      function buildOptionsPlain() {
+        return baseOptions();
+      }
+
+      let qrInstances = [];
+
+      function setMessage(text, kind) {
+        el.msg.textContent = text || "";
+        el.msg.className = "msg" + (kind ? " " + kind : "");
+      }
+
+      function syncQrGraphicsFromForm() {
+        if (qrInstances.length === 0) return false;
+        if (!el.useCenterNum.checked) {
+          qrInstances.forEach(function (inst) {
+            inst.qr.update(buildOptionsPlain());
+          });
+          return true;
+        }
+        const maxN = clampCenterNum(el.centerNum.value);
+        if (qrInstances.length !== maxN) return false;
+        qrInstances.forEach(function (inst) {
+          if (inst.digit != null) inst.qr.update(buildOptionsForCenterDigit(inst.digit));
+        });
+        return true;
+      }
+
+      let rebuildTimer = null;
+      function requestQrRebuild(immediate) {
+        function run() {
+          rebuildTimer = null;
+          el.centerNum.value = String(clampCenterNum(el.centerNum.value));
+          rebuildQr();
+        }
+        if (immediate) {
+          if (rebuildTimer) clearTimeout(rebuildTimer);
+          run();
+          return;
+        }
+        clearTimeout(rebuildTimer);
+        rebuildTimer = setTimeout(run, 85);
+      }
+
+      function downloadQR() {
+        el.centerNum.value = String(clampCenterNum(el.centerNum.value));
+        if (qrInstances.length === 0) {
+          setMessage("Nothing to download yet.", "error");
+          return;
+        }
+        const maxN = clampCenterNum(el.centerNum.value);
+        if (el.useCenterNum.checked && qrInstances.length !== maxN) {
+          requestQrRebuild(true);
+        }
+        if (!syncQrGraphicsFromForm()) {
+          setMessage("Could not sync export — try again.", "error");
+          return;
+        }
+        const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, "-");
+        if (el.useCenterNum.checked) {
+          qrInstances.forEach(function (inst, i) {
+            window.setTimeout(function () {
+              if (inst.digit != null) {
+                inst.qr.update(buildOptionsForCenterDigit(inst.digit));
+                inst.qr.download({
+                  name: "qr-table-" + inst.digit + "-" + stamp,
+                  extension: "png",
+                });
+              }
+            }, i * 400);
+          });
+          setMessage("Downloading " + maxN + " files…", "ok");
+        } else {
+          qrInstances[0].qr.update(buildOptionsPlain());
+          qrInstances[0].qr.download({
+            name: "qr-whatsapp-" + stamp,
+            extension: "png",
+          });
+          setMessage("Download started.", "ok");
+        }
+      }
+
+      function toggleEccUi() {
+        const on = el.useCenterNum.checked;
+        el.eccLevel.disabled = on;
+        el.eccHint.hidden = !on;
+      }
+
+      function toggleDotGradientRow() {
+        el.dotGradientRow.hidden = !el.dotGradient.checked;
+      }
+
+      function toggleBgGradientRow() {
+        el.bgGradientRow.hidden = !el.bgGradient.checked;
+      }
+
+      function toggleCornerColorsRow() {
+        el.cornerColorsRow.hidden = !el.separateCornerColors.checked;
+      }
+
+      el.centerNumScale.addEventListener("input", function () {
+        el.centerNumScaleLabel.textContent = el.centerNumScale.value;
+        requestQrRebuild(false);
+      });
+
+      el.centerImageMargin.addEventListener("input", function () {
+        el.centerMarginLabel.textContent = el.centerImageMargin.value;
+        requestQrRebuild(false);
+      });
+
+      el.dotGradient.addEventListener("change", function () {
+        toggleDotGradientRow();
+        requestQrRebuild(true);
+      });
+      el.bgGradient.addEventListener("change", function () {
+        toggleBgGradientRow();
+        requestQrRebuild(true);
+      });
+      el.separateCornerColors.addEventListener("change", function () {
+        toggleCornerColorsRow();
+        requestQrRebuild(true);
+      });
+
+      el.fg.addEventListener("input", function () {
+        requestQrRebuild(false);
+      });
+      el.bg.addEventListener("input", function () {
+        requestQrRebuild(false);
+      });
+      el.fg2.addEventListener("input", function () {
+        requestQrRebuild(false);
+      });
+      el.bg2.addEventListener("input", function () {
+        requestQrRebuild(false);
+      });
+      el.dotGradRotate.addEventListener("input", function () {
+        requestQrRebuild(false);
+      });
+      el.bgGradRotate.addEventListener("input", function () {
+        requestQrRebuild(false);
+      });
+      el.cornerSquareColor.addEventListener("input", function () {
+        requestQrRebuild(false);
+      });
+      el.cornerDotColor.addEventListener("input", function () {
+        requestQrRebuild(false);
+      });
+
+      el.dotsType.addEventListener("change", function () {
+        requestQrRebuild(true);
+      });
+      el.cornerSquareType.addEventListener("change", function () {
+        requestQrRebuild(true);
+      });
+      el.cornerDotType.addEventListener("change", function () {
+        requestQrRebuild(true);
+      });
+      el.eccLevel.addEventListener("change", function () {
+        requestQrRebuild(true);
+      });
+
+      el.hideBgDotsUnderImage.addEventListener("change", function () {
+        requestQrRebuild(true);
+      });
+
+      el.centerNum.addEventListener("input", function () {
+        requestQrRebuild(false);
+      });
+      el.centerNum.addEventListener("change", function () {
+        el.centerNum.value = String(clampCenterNum(el.centerNum.value));
+        requestQrRebuild(true);
+      });
+
+      function appendCenterCell(i) {
+        const cell = document.createElement("div");
+        cell.className = "qr-cell";
+        const cap = document.createElement("span");
+        cap.className = "qr-cell-label";
+        cap.textContent = "#" + i;
+        const slot = document.createElement("div");
+        slot.className = "qr-slot";
+        cell.appendChild(cap);
+        cell.appendChild(slot);
+        el.grid.appendChild(cell);
+        return slot;
+      }
+
+      /** Full batch 1…N (or one plain QR), always matches current form. */
+      function rebuildQr() {
+        el.grid.innerHTML = "";
+        qrInstances = [];
+        const maxN = clampCenterNum(el.centerNum.value);
+
+        if (el.useCenterNum.checked) {
+          for (let i = 1; i <= maxN; i++) {
+            const slot = appendCenterCell(i);
+            const qr = new QRCodeStyling(buildOptionsForCenterDigit(i));
+            qr.append(slot);
+            qrInstances.push({ qr: qr, digit: i });
+          }
+        } else {
+          const slot = document.createElement("div");
+          slot.className = "qr-slot";
+          el.grid.appendChild(slot);
+          const qr = new QRCodeStyling(buildOptionsPlain());
+          qr.append(slot);
+          qrInstances.push({ qr: qr, digit: null });
+        }
+      }
+
+      el.useCenterNum.addEventListener("change", function () {
+        toggleEccUi();
+        requestQrRebuild(true);
+      });
+
+      document.querySelector("#btn-download").addEventListener("click", downloadQR);
+
+      toggleEccUi();
+      toggleDotGradientRow();
+      toggleBgGradientRow();
+      toggleCornerColorsRow();
+      requestQrRebuild(true);
+    </script>
+  </body>
+</html>
