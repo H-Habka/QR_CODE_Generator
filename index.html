@@ -399,44 +399,33 @@
       }
 
       @media (max-width: 720px) {
-        html {
-          height: 100%;
-          height: 100dvh;
-        }
-
+        /* Normal page scroll (reliable on iOS/Android). QR uses sticky + max-height. */
         body {
           padding: 0.5rem 0.65rem;
-          min-height: 100%;
-          min-height: 100dvh;
-          overflow: hidden;
+          overflow-x: hidden;
+          overflow-y: auto;
+          -webkit-overflow-scrolling: touch;
         }
 
         .wrap {
-          display: flex;
-          flex-direction: column;
-          height: 100%;
-          max-height: 100dvh;
-          min-height: 0;
+          display: block;
+          width: 100%;
         }
 
         .layout {
           display: flex;
           flex-direction: column;
-          flex: 1 1 auto;
-          min-height: 0;
-          gap: 0.6rem;
-          grid-template-columns: unset;
+          gap: 0.75rem;
           align-items: stretch;
+          grid-template-columns: unset;
         }
 
-        /* Top half: fixed 50dvh; QR grid scrolls inside this pane */
         .preview {
           order: -1;
-          position: relative;
-          top: auto;
-          z-index: 2;
-          flex: 0 0 50dvh;
-          height: 50dvh;
+          position: sticky;
+          top: 0;
+          z-index: 5;
+          align-self: stretch;
           max-height: 50dvh;
           min-height: 0;
           width: 100%;
@@ -444,18 +433,16 @@
           overflow-y: auto;
           -webkit-overflow-scrolling: touch;
           overscroll-behavior: contain;
+          /* Opaque while scrolling so form doesn’t show through */
+          background: var(--bg);
         }
 
-        /* Bottom half: remaining viewport; form scrolls here */
         .panel {
-          flex: 1 1 0;
+          flex: none;
+          width: 100%;
           min-height: 0;
-          height: 0;
-          overflow-y: auto;
-          overflow-x: hidden;
-          -webkit-overflow-scrolling: touch;
-          overscroll-behavior: contain;
-          padding-right: 4px;
+          overflow: visible;
+          padding-bottom: 1.5rem;
         }
 
         :root {
