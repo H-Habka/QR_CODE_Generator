@@ -120,6 +120,22 @@
         outline-offset: 2px;
       }
 
+      input[type="tel"] {
+        width: 100%;
+        padding: 0.75rem 1rem;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        background: var(--bg);
+        color: var(--text);
+        font-size: 1rem;
+        margin-bottom: 1rem;
+      }
+
+      input[type="tel"]:focus {
+        outline: 2px solid var(--accent);
+        outline-offset: 2px;
+      }
+
       .whatsapp-note {
         font-size: 0.9rem;
         color: var(--muted);
@@ -412,16 +428,29 @@
         <div class="panel">
           <h1>Stylish QR Code</h1>
           <p class="subtitle">
-            WhatsApp <strong style="color: var(--text)">+971588930130</strong> — the <strong>live preview</strong> on the right updates as you change options. It stays <strong>sticky</strong> while you scroll the form.
+            Set your <strong>WhatsApp</strong> number below — the <strong>live preview</strong> updates as you change options and stays <strong>sticky</strong> while you scroll.
           </p>
 
           <div class="card">
         <p class="whatsapp-note">
-          QR links to WhatsApp <strong>+971588930130</strong> (<code>wa.me/971588930130</code>).<br />
+          QR opens WhatsApp <strong id="wa-display-strong">+971588930130</strong> (<code id="wa-display-code">wa.me/971588930130</code>).<br />
           Code is fixed at <strong>3.2 × 3.2 cm</strong> (PNG <span id="qr-px-label"></span> px for print).
         </p>
         <p class="hint-line">
           Every control updates the QRs immediately (codes <strong>1…N</strong> wrap in the preview). Export size is still <strong>3.2 cm</strong> in the PNG files.
+        </p>
+
+        <h3 class="section-title">WhatsApp number</h3>
+        <label for="wa-phone">Phone (international — digits, spaces, or +)</label>
+        <input
+          type="tel"
+          id="wa-phone"
+          value="+971588930130"
+          placeholder="e.g. +971588930130 or 971588930130"
+          autocomplete="tel"
+        />
+        <p class="hint-line" style="margin-top: -0.5rem">
+          Saved as <code>https://wa.me/&lt;digits&gt;</code>. UAE mobiles like <code>05…</code> are normalized to <code>9715…</code> when possible.
         </p>
 
         <h3 class="section-title">Table &amp; center image</h3>
@@ -577,10 +606,6 @@
 
     <script src="https://cdn.jsdelivr.net/npm/qr-code-styling@1.5.0/lib/qr-code-styling.js"></script>
     <script>
-      /** Full international number +971588930130 → wa.me without + or spaces */
-      const WHATSAPP_URL = "https://wa.me/971588930130";
-      const qrData = WHATSAPP_URL;
-
       /** 3.2 cm @ 300 DPI → pixel square (sharp when printed at 3.2 cm). */
       const QR_SIZE_CM = 3.2;
       const QR_PRINT_DPI = 300;
@@ -589,6 +614,7 @@
       document.getElementById("qr-px-label").textContent = String(QR_SIZE_PX);
 
       const el = {
+        waPhone: document.querySelector("#wa-phone"),
         centerNum: document.querySelector("#center-num"),
         centerNumScale: document.querySelector("#center-num-scale"),
         centerNumScaleLabel: document.querySelector("#center-num-scale-label"),
@@ -618,6 +644,37 @@
         msg: document.querySelector("#msg"),
         grid: document.querySelector("#qr-grid"),
       };
+
+      const WA_FALLBACK_DIGITS = "971588930130";
+
+      /** Digits only for wa.me (no +). UAE 05xxxxxxxx → 9715xxxxxxxx when it fits. */
+      function getWhatsAppDigits() {
+        let s = String(el.waPhone.value || "")
+          .trim()
+          .replace(/\s/g, "")
+          .replace(/-/g, "");
+        if (s.startsWith("+")) s = s.slice(1);
+        if (s.startsWith("00")) s = s.slice(2);
+        s = s.replace(/\D/g, "");
+        if (s.startsWith("0")) s = s.slice(1);
+        if (s.length >= 8 && s.length <= 10 && s.charAt(0) === "5" && !s.startsWith("971")) {
+          s = "971" + s;
+        }
+        if (!s || s.length < 10) return WA_FALLBACK_DIGITS;
+        return s;
+      }
+
+      function getWhatsAppUrl() {
+        return "https://wa.me/" + getWhatsAppDigits();
+      }
+
+      function updateWaDisplayLabels() {
+        const d = getWhatsAppDigits();
+        const strong = document.getElementById("wa-display-strong");
+        const code = document.getElementById("wa-display-code");
+        if (strong) strong.textContent = "+" + d;
+        if (code) code.textContent = "wa.me/" + d;
+      }
 
       /** Slider 50–200%: scales overlay slot (`imageSize`) and target canvas for the digit. */
       function centerScalePercent() {
@@ -762,7 +819,7 @@
         return {
           width: QR_SIZE_PX,
           height: QR_SIZE_PX,
-          data: qrData,
+          data: getWhatsAppUrl(),
           qrOptions: {
             errorCorrectionLevel: effectiveEcc(),
           },
@@ -911,6 +968,15 @@
         requestQrRebuild(true);
       });
 
+      el.waPhone.addEventListener("input", function () {
+        updateWaDisplayLabels();
+        requestQrRebuild(false);
+      });
+      el.waPhone.addEventListener("change", function () {
+        updateWaDisplayLabels();
+        requestQrRebuild(true);
+      });
+
       el.fg.addEventListener("input", function () {
         requestQrRebuild(false);
       });
@@ -1009,6 +1075,7 @@
       toggleDotGradientRow();
       toggleBgGradientRow();
       toggleCornerColorsRow();
+      updateWaDisplayLabels();
       requestQrRebuild(true);
     </script>
   </body>
