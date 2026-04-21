@@ -399,19 +399,67 @@
       }
 
       @media (max-width: 720px) {
-        .layout {
-          grid-template-columns: 1fr;
+        html {
+          height: 100%;
+          height: 100dvh;
         }
 
+        body {
+          padding: 0.5rem 0.65rem;
+          min-height: 100%;
+          min-height: 100dvh;
+          overflow: hidden;
+        }
+
+        .wrap {
+          display: flex;
+          flex-direction: column;
+          height: 100%;
+          max-height: 100dvh;
+          min-height: 0;
+        }
+
+        .layout {
+          display: flex;
+          flex-direction: column;
+          flex: 1 1 auto;
+          min-height: 0;
+          gap: 0.6rem;
+          grid-template-columns: unset;
+          align-items: stretch;
+        }
+
+        /* Top half: fixed 50dvh; QR grid scrolls inside this pane */
         .preview {
-          position: static;
           order: -1;
-          max-height: none;
-          min-height: calc(var(--qr-display-size) + 2.5rem);
+          position: relative;
+          top: auto;
+          z-index: 2;
+          flex: 0 0 50dvh;
+          height: 50dvh;
+          max-height: 50dvh;
+          min-height: 0;
+          width: 100%;
+          overflow-x: hidden;
+          overflow-y: auto;
+          -webkit-overflow-scrolling: touch;
+          overscroll-behavior: contain;
+        }
+
+        /* Bottom half: remaining viewport; form scrolls here */
+        .panel {
+          flex: 1 1 0;
+          min-height: 0;
+          height: 0;
+          overflow-y: auto;
+          overflow-x: hidden;
+          -webkit-overflow-scrolling: touch;
+          overscroll-behavior: contain;
+          padding-right: 4px;
         }
 
         :root {
-          --qr-display-size: min(4.6cm, 88vw);
+          --qr-display-size: min(36vmin, 40vw);
         }
       }
 
@@ -428,7 +476,7 @@
         <div class="panel">
           <h1>Stylish QR Code</h1>
           <p class="subtitle">
-            Set your <strong>WhatsApp</strong> number below — the <strong>live preview</strong> updates as you change options and stays <strong>sticky</strong> while you scroll.
+            Set your <strong>WhatsApp</strong> number below — the <strong>live preview</strong> updates as you change options. On desktop it stays <strong>sticky</strong> beside the form; on phones it sits in the <strong>top half</strong> while you scroll settings in the bottom half.
           </p>
 
           <div class="card">
@@ -437,7 +485,7 @@
           Code is fixed at <strong>3.2 × 3.2 cm</strong> (PNG <span id="qr-px-label"></span> px for print).
         </p>
         <p class="hint-line">
-          Every control updates the QRs immediately (codes <strong>1…N</strong> wrap in the preview). Export size is still <strong>3.2 cm</strong> in the PNG files.
+          Every control updates the QRs immediately (codes <strong>1…N</strong> wrap in the preview). Export size is still <strong>3.2 cm</strong> in the PNG files. Your choices are saved in this browser (<strong>localStorage</strong>).
         </p>
 
         <h3 class="section-title">WhatsApp number</h3>
@@ -644,6 +692,87 @@
         msg: document.querySelector("#msg"),
         grid: document.querySelector("#qr-grid"),
       };
+
+      const STORAGE_KEY = "stylish-qr-generator-settings-v1";
+
+      function collectSettings() {
+        return {
+          waPhone: el.waPhone.value,
+          centerNum: el.centerNum.value,
+          useCenterNum: el.useCenterNum.checked,
+          centerNumScale: el.centerNumScale.value,
+          centerImageMargin: el.centerImageMargin.value,
+          hideBgDotsUnderImage: el.hideBgDotsUnderImage.checked,
+          dotsType: el.dotsType.value,
+          cornerSquareType: el.cornerSquareType.value,
+          cornerDotType: el.cornerDotType.value,
+          eccLevel: el.eccLevel.value,
+          fg: el.fg.value,
+          bg: el.bg.value,
+          dotGradient: el.dotGradient.checked,
+          fg2: el.fg2.value,
+          dotGradRotate: el.dotGradRotate.value,
+          bgGradient: el.bgGradient.checked,
+          bg2: el.bg2.value,
+          bgGradRotate: el.bgGradRotate.value,
+          separateCornerColors: el.separateCornerColors.checked,
+          cornerSquareColor: el.cornerSquareColor.value,
+          cornerDotColor: el.cornerDotColor.value,
+        };
+      }
+
+      function selectHasValue(select, value) {
+        return (
+          value != null &&
+          String(value) !== "" &&
+          Array.prototype.some.call(select.options, function (o) {
+            return o.value === value;
+          })
+        );
+      }
+
+      function applySettings(s) {
+        if (!s || typeof s !== "object") return;
+        if (s.waPhone != null) el.waPhone.value = String(s.waPhone);
+        if (s.centerNum != null) el.centerNum.value = String(s.centerNum);
+        if (s.useCenterNum != null) el.useCenterNum.checked = !!s.useCenterNum;
+        if (s.centerNumScale != null) el.centerNumScale.value = String(s.centerNumScale);
+        if (s.centerImageMargin != null) el.centerImageMargin.value = String(s.centerImageMargin);
+        if (s.hideBgDotsUnderImage != null) el.hideBgDotsUnderImage.checked = !!s.hideBgDotsUnderImage;
+        if (selectHasValue(el.dotsType, s.dotsType)) el.dotsType.value = s.dotsType;
+        if (selectHasValue(el.cornerSquareType, s.cornerSquareType)) el.cornerSquareType.value = s.cornerSquareType;
+        if (selectHasValue(el.cornerDotType, s.cornerDotType)) el.cornerDotType.value = s.cornerDotType;
+        if (selectHasValue(el.eccLevel, s.eccLevel)) el.eccLevel.value = s.eccLevel;
+        if (s.fg != null) el.fg.value = s.fg;
+        if (s.bg != null) el.bg.value = s.bg;
+        if (s.dotGradient != null) el.dotGradient.checked = !!s.dotGradient;
+        if (s.fg2 != null) el.fg2.value = s.fg2;
+        if (s.dotGradRotate != null) el.dotGradRotate.value = String(s.dotGradRotate);
+        if (s.bgGradient != null) el.bgGradient.checked = !!s.bgGradient;
+        if (s.bg2 != null) el.bg2.value = s.bg2;
+        if (s.bgGradRotate != null) el.bgGradRotate.value = String(s.bgGradRotate);
+        if (s.separateCornerColors != null) el.separateCornerColors.checked = !!s.separateCornerColors;
+        if (s.cornerSquareColor != null) el.cornerSquareColor.value = s.cornerSquareColor;
+        if (s.cornerDotColor != null) el.cornerDotColor.value = s.cornerDotColor;
+      }
+
+      let persistTimer = null;
+      function schedulePersistSettings() {
+        clearTimeout(persistTimer);
+        persistTimer = setTimeout(function () {
+          try {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(collectSettings()));
+          } catch (err) {}
+        }, 200);
+      }
+
+      function loadSettings() {
+        try {
+          const raw = localStorage.getItem(STORAGE_KEY);
+          if (!raw) return;
+          applySettings(JSON.parse(raw));
+        } catch (err) {}
+      }
 
       const WA_FALLBACK_DIGITS = "971588930130";
 
@@ -879,6 +1008,7 @@
           rebuildTimer = null;
           el.centerNum.value = String(clampCenterNum(el.centerNum.value));
           rebuildQr();
+          schedulePersistSettings();
         }
         if (immediate) {
           if (rebuildTimer) clearTimeout(rebuildTimer);
@@ -1071,6 +1201,9 @@
 
       document.querySelector("#btn-download").addEventListener("click", downloadQR);
 
+      loadSettings();
+      el.centerNumScaleLabel.textContent = el.centerNumScale.value;
+      el.centerMarginLabel.textContent = el.centerImageMargin.value;
       toggleEccUi();
       toggleDotGradientRow();
       toggleBgGradientRow();
