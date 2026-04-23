@@ -60,6 +60,18 @@
         letter-spacing: -0.02em;
       }
 
+      .visually-hidden {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        white-space: nowrap;
+        border: 0;
+      }
+
       .subtitle {
         color: var(--muted);
         font-size: 0.9rem;
@@ -463,30 +475,59 @@
         <div class="panel">
           <h1>Stylish QR Code</h1>
           <p class="subtitle">
-            Set your <strong>WhatsApp</strong> number below — the <strong>live preview</strong> updates as you change options. On desktop it stays <strong>sticky</strong> beside the form; on phones it sits in the <strong>top half</strong> while you scroll settings in the bottom half.
+            Choose a <strong>WhatsApp</strong> chat link or a <strong>custom URL</strong> below — the <strong>live preview</strong> updates as you change options. On desktop it stays <strong>sticky</strong> beside the form; on phones it sits in the <strong>top half</strong> while you scroll settings in the bottom half.
           </p>
 
           <div class="card">
-        <p class="whatsapp-note">
-          QR opens WhatsApp <strong id="wa-display-strong">+971588930130</strong> (<code id="wa-display-code">wa.me/971588930130</code>).<br />
+        <p class="whatsapp-note" id="link-destination-note">
+          <span id="link-note-prefix">QR opens WhatsApp</span> <strong id="wa-display-strong">+971588930130</strong> (<code id="wa-display-code">https://wa.me/971588930130</code>).<br />
           Code is fixed at <strong>3.2 × 3.2 cm</strong> (PNG <span id="qr-px-label"></span> px for print).
         </p>
         <p class="hint-line">
           Every control updates the QRs immediately (codes <strong>1…N</strong> wrap in the preview). Export size is still <strong>3.2 cm</strong> in the PNG files. Your choices are saved in this browser (<strong>localStorage</strong>).
         </p>
 
-        <h3 class="section-title">WhatsApp number</h3>
-        <label for="wa-phone">Phone (international — digits, spaces, or +)</label>
-        <input
-          type="tel"
-          id="wa-phone"
-          value="+971588930130"
-          placeholder="e.g. +971588930130 or 971588930130"
-          autocomplete="tel"
-        />
-        <p class="hint-line" style="margin-top: -0.5rem">
-          Saved as <code>https://wa.me/&lt;digits&gt;</code>. UAE mobiles like <code>05…</code> are normalized to <code>9715…</code> when possible.
-        </p>
+        <h3 class="section-title">Link destination</h3>
+        <fieldset class="link-mode-fieldset" style="border: 0; margin: 0; padding: 0">
+          <legend class="visually-hidden">Link type</legend>
+          <div class="checkbox-row" style="margin-bottom: 0.6rem">
+            <input type="radio" name="link-mode" id="link-mode-whatsapp" value="whatsapp" />
+            <label for="link-mode-whatsapp">WhatsApp</label>
+          </div>
+          <div class="checkbox-row" style="margin-bottom: 0.75rem">
+            <input type="radio" name="link-mode" id="link-mode-custom" value="custom" checked />
+            <label for="link-mode-custom">Custom URL</label>
+          </div>
+        </fieldset>
+
+        <div id="block-wa-phone" hidden>
+          <label for="wa-phone">Phone (international — digits, spaces, or +)</label>
+          <input
+            type="tel"
+            id="wa-phone"
+            value="+971588930130"
+            placeholder="e.g. +971588930130 or 971588930130"
+            autocomplete="tel"
+          />
+          <p class="hint-line" style="margin-top: -0.5rem">
+            Saved as <code>https://wa.me/&lt;digits&gt;</code>. UAE mobiles like <code>05…</code> are normalized to <code>9715…</code> when possible.
+          </p>
+        </div>
+
+        <div id="block-custom-url">
+          <label for="custom-url">Page or site URL</label>
+          <input
+            type="text"
+            id="custom-url"
+            value="https://dashboard.sp-taqeef.ae/company-info"
+            placeholder="e.g. https://yoursite.com/menu or yoursite.com/path"
+            autocomplete="url"
+            inputmode="url"
+          />
+          <p class="hint-line" style="margin-top: -0.5rem">
+            <code>https://</code> is added if you omit a scheme. The QR encodes exactly that final link.
+          </p>
+        </div>
 
         <h3 class="section-title">Table &amp; center image</h3>
         <label for="center-num">Up to table number (1–25) — will create QRs for <strong>1</strong> through this value</label>
@@ -649,7 +690,13 @@
       document.getElementById("qr-px-label").textContent = String(QR_SIZE_PX);
 
       const el = {
+        linkModeWhatsapp: document.querySelector("#link-mode-whatsapp"),
+        linkModeCustom: document.querySelector("#link-mode-custom"),
+        blockWaPhone: document.querySelector("#block-wa-phone"),
+        blockCustomUrl: document.querySelector("#block-custom-url"),
+        linkNotePrefix: document.querySelector("#link-note-prefix"),
         waPhone: document.querySelector("#wa-phone"),
+        customUrl: document.querySelector("#custom-url"),
         centerNum: document.querySelector("#center-num"),
         centerNumScale: document.querySelector("#center-num-scale"),
         centerNumScaleLabel: document.querySelector("#center-num-scale-label"),
@@ -682,9 +729,21 @@
 
       const STORAGE_KEY = "stylish-qr-generator-settings-v1";
 
+      const WA_FALLBACK_DIGITS = "971588930130";
+      /** Default custom link — public company info page (also used when field is empty). */
+      const DEFAULT_CUSTOM_URL = "https://dashboard.sp-taqeef.ae/company-info";
+      const CUSTOM_URL_FALLBACK = DEFAULT_CUSTOM_URL;
+
+      function getLinkMode() {
+        const c = document.querySelector('input[name="link-mode"]:checked');
+        return c && c.value === "custom" ? "custom" : "whatsapp";
+      }
+
       function collectSettings() {
         return {
+          linkMode: getLinkMode(),
           waPhone: el.waPhone.value,
+          customUrl: el.customUrl.value,
           centerNum: el.centerNum.value,
           useCenterNum: el.useCenterNum.checked,
           centerNumScale: el.centerNumScale.value,
@@ -720,7 +779,17 @@
 
       function applySettings(s) {
         if (!s || typeof s !== "object") return;
+        if (s.linkMode === "custom") el.linkModeCustom.checked = true;
+        else if (s.linkMode === "whatsapp") el.linkModeWhatsapp.checked = true;
+        else {
+          el.linkModeCustom.checked = true;
+        }
         if (s.waPhone != null) el.waPhone.value = String(s.waPhone);
+        if (s.customUrl != null && String(s.customUrl).trim() !== "") {
+          el.customUrl.value = String(s.customUrl);
+        } else if (s.linkMode === "custom" || s.linkMode == null) {
+          el.customUrl.value = DEFAULT_CUSTOM_URL;
+        }
         if (s.centerNum != null) el.centerNum.value = String(s.centerNum);
         if (s.useCenterNum != null) el.useCenterNum.checked = !!s.useCenterNum;
         if (s.centerNumScale != null) el.centerNumScale.value = String(s.centerNumScale);
@@ -761,8 +830,6 @@
         } catch (err) {}
       }
 
-      const WA_FALLBACK_DIGITS = "971588930130";
-
       /** Digits only for wa.me (no +). UAE 05xxxxxxxx → 9715xxxxxxxx when it fits. */
       function getWhatsAppDigits() {
         let s = String(el.waPhone.value || "")
@@ -784,12 +851,65 @@
         return "https://wa.me/" + getWhatsAppDigits();
       }
 
-      function updateWaDisplayLabels() {
-        const d = getWhatsAppDigits();
+      /** Add https if the user omitted a scheme (keeps other schemes as typed). */
+      function normalizeCustomUrl(raw) {
+        const s = String(raw || "").trim();
+        if (!s) return CUSTOM_URL_FALLBACK;
+        if (/^https?:\/\//i.test(s)) return s;
+        if (/^[a-z][-a-z0-9+.]*:\/\//i.test(s)) return s;
+        return "https://" + s;
+      }
+
+      function getEncodedPayloadUrl() {
+        if (getLinkMode() === "custom") {
+          return normalizeCustomUrl(el.customUrl.value);
+        }
+        return getWhatsAppUrl();
+      }
+
+      function toggleLinkModeFields() {
+        const wa = getLinkMode() === "whatsapp";
+        if (el.blockWaPhone) el.blockWaPhone.hidden = !wa;
+        if (el.blockCustomUrl) el.blockCustomUrl.hidden = wa;
+      }
+
+      function updateLinkDisplayLabels() {
         const strong = document.getElementById("wa-display-strong");
         const code = document.getElementById("wa-display-code");
-        if (strong) strong.textContent = "+" + d;
-        if (code) code.textContent = "wa.me/" + d;
+        if (getLinkMode() === "whatsapp") {
+          if (el.linkNotePrefix) el.linkNotePrefix.textContent = "QR opens WhatsApp";
+          const d = getWhatsAppDigits();
+          if (strong) strong.textContent = "+" + d;
+          if (code) code.textContent = "https://wa.me/" + d;
+          return;
+        }
+        if (el.linkNotePrefix) {
+          const raw = String(el.customUrl.value || "").trim();
+          if (!raw) {
+            el.linkNotePrefix.textContent = "No URL yet — preview uses";
+          } else {
+            el.linkNotePrefix.textContent = "QR encodes";
+          }
+        }
+        const resolved = normalizeCustomUrl(el.customUrl.value);
+        if (strong) {
+          if (!String(el.customUrl.value || "").trim()) {
+            try {
+              const u = new URL(CUSTOM_URL_FALLBACK);
+              strong.textContent = u.hostname || "Link";
+            } catch (err) {
+              strong.textContent = "Link";
+            }
+          } else {
+            try {
+              const u = new URL(resolved);
+              strong.textContent = u.hostname || "Link";
+            } catch (err) {
+              strong.textContent = "Link";
+            }
+          }
+        }
+        if (code) code.textContent = resolved;
       }
 
       /** Slider 50–200%: scales overlay slot (`imageSize`) and target canvas for the digit. */
@@ -935,7 +1055,7 @@
         return {
           width: QR_SIZE_PX,
           height: QR_SIZE_PX,
-          data: getWhatsAppUrl(),
+          data: getEncodedPayloadUrl(),
           qrOptions: {
             errorCorrectionLevel: effectiveEcc(),
           },
@@ -1037,7 +1157,7 @@
         } else {
           qrInstances[0].qr.update(buildOptionsPlain());
           qrInstances[0].qr.download({
-            name: "qr-whatsapp-" + stamp,
+            name: (getLinkMode() === "custom" ? "qr-url-" : "qr-whatsapp-") + stamp,
             extension: "png",
           });
           setMessage("Download started.", "ok");
@@ -1086,12 +1206,29 @@
       });
 
       el.waPhone.addEventListener("input", function () {
-        updateWaDisplayLabels();
+        updateLinkDisplayLabels();
         requestQrRebuild(false);
       });
       el.waPhone.addEventListener("change", function () {
-        updateWaDisplayLabels();
+        updateLinkDisplayLabels();
         requestQrRebuild(true);
+      });
+
+      el.customUrl.addEventListener("input", function () {
+        updateLinkDisplayLabels();
+        requestQrRebuild(false);
+      });
+      el.customUrl.addEventListener("change", function () {
+        updateLinkDisplayLabels();
+        requestQrRebuild(true);
+      });
+
+      document.querySelectorAll('input[name="link-mode"]').forEach(function (radio) {
+        radio.addEventListener("change", function () {
+          toggleLinkModeFields();
+          updateLinkDisplayLabels();
+          requestQrRebuild(true);
+        });
       });
 
       el.fg.addEventListener("input", function () {
@@ -1195,7 +1332,8 @@
       toggleDotGradientRow();
       toggleBgGradientRow();
       toggleCornerColorsRow();
-      updateWaDisplayLabels();
+      toggleLinkModeFields();
+      updateLinkDisplayLabels();
       requestQrRebuild(true);
     </script>
   </body>
